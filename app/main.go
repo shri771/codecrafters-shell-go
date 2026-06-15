@@ -17,6 +17,9 @@ func main() {
 		cmd := reader.Text()
 
 		// Check for a valid cmd
+		if cmd == "exit" {
+			os.Exit(0)
+		}
 		var isValid bool
 		for _, c := range validCmd {
 			if c == cmd {
