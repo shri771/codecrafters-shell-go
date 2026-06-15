@@ -4,9 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 )
 
 var validCmd = []string{"echo", "cd"}
+
+type cliCommand struct {
+	name     string
+	callback func(string) error
+}
 
 func main() {
 	reader := bufio.NewScanner(os.Stdin)
@@ -14,21 +20,50 @@ func main() {
 		fmt.Print("$ ")
 		reader.Scan()
 
-		cmd := reader.Text()
+		line := reader.Text()
 
-		// Check for a valid cmd
-		if cmd == "exit" {
-			os.Exit(0)
-		}
-		var isValid bool
-		for _, c := range validCmd {
-			if c == cmd {
-				isValid = true
-			}
-		}
-		if !isValid {
-			fmt.Printf("%s: command not found\n", cmd)
+		parts := strings.Fields(strings.ToLower(line))
+
+		program := parts[0]
+		args := parts[1:]
+
+		avilableCmd := getCommands()
+
+		cliCmd, ok := avilableCmd[program]
+		if ok {
+			cliCmd.callback(strings.Join(args, " "))
+		} else {
+			fmt.Println("%s: command not found", program)
 		}
 
 	}
+}
+
+func getCommands() map[string]cliCommand {
+	return map[string]cliCommand{
+		"cd": {
+			name: "cd",
+			callback: func(string) error {
+				return nil
+			},
+		},
+		"echo": {
+			name:     "echo",
+			callback: echo,
+		},
+		"exit": {
+			name:     "exit",
+			callback: exit,
+		},
+	}
+}
+
+func exit(arg string) error {
+	os.Exit(0)
+	return nil
+}
+
+func echo(arg string) error {
+	fmt.Println(arg)
+	return nil
 }
