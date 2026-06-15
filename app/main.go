@@ -25,15 +25,20 @@ func main() {
 		parts := strings.Fields(strings.ToLower(line))
 
 		program := parts[0]
-		args := parts[1:]
 
-		avilableCmd := getCommands()
+		var args []string
 
-		cliCmd, ok := avilableCmd[program]
+		if len(parts) != 0 {
+			args = parts[1:]
+		}
+
+		availableCmd := getCommands()
+
+		cliCmd, ok := availableCmd[program]
 		if ok {
 			cliCmd.callback(strings.Join(args, " "))
 		} else {
-			fmt.Println("%s: command not found", program)
+			fmt.Printf("%s: command not found\n", program)
 		}
 
 	}
