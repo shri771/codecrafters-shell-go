@@ -82,7 +82,7 @@ func typeCMD(arg string) error {
 
 	_, ok := availableCmd[arg]
 	if !ok {
-		fmt.Printf("%s: invalid command\n", arg)
+		fmt.Printf("%s: not found\n", arg)
 		return nil
 	}
 
