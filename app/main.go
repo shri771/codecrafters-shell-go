@@ -1,13 +1,31 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 )
 
-// Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
-var _ = fmt.Print
+var validCmd = []string{"echo", "cd"}
 
 func main() {
-	// TODO: Uncomment the code below to pass the first stage
-	fmt.Print("$ ")
+	reader := bufio.NewScanner(os.Stdin)
+	for {
+		fmt.Print("$ ")
+		reader.Scan()
+
+		cmd := reader.Text()
+
+		// Check for a valid cmd
+		var isValid bool
+		for _, c := range validCmd {
+			if c == cmd {
+				isValid = true
+			}
+		}
+		if !isValid {
+			fmt.Printf("%s: command not found\n", cmd)
+		}
+
+	}
 }
