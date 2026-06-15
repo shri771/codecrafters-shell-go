@@ -86,7 +86,7 @@ func typeCMD(arg string) error {
 		return nil
 	}
 
-	fmt.Printf("%s: is a shell builtin\n", arg)
+	fmt.Printf("%s is a shell builtin\n", arg)
 
 	return nil
 }
