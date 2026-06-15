@@ -60,6 +60,10 @@ func getCommands() map[string]cliCommand {
 			name:     "exit",
 			callback: exit,
 		},
+		"type": {
+			name:     "type",
+			callback: typeCMD,
+		},
 	}
 }
 
@@ -70,5 +74,19 @@ func exit(arg string) error {
 
 func echo(arg string) error {
 	fmt.Println(arg)
+	return nil
+}
+
+func typeCMD(arg string) error {
+	availableCmd := getCommands()
+
+	_, ok := availableCmd[arg]
+	if !ok {
+		fmt.Printf("%s: invalid command\n", arg)
+		return nil
+	}
+
+	fmt.Printf("%s: is a shell builtin\n", arg)
+
 	return nil
 }
