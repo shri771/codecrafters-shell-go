@@ -7,12 +7,6 @@ type CliCommand struct {
 
 func GetCommands() map[string]CliCommand {
 	return map[string]CliCommand{
-		"cd": {
-			Name: "cd",
-			Callback: func([]string) error {
-				return nil
-			},
-		},
 		"echo": {
 			Name:     "echo",
 			Callback: echoCMD,
@@ -28,6 +22,10 @@ func GetCommands() map[string]CliCommand {
 		"pwd": {
 			Name:     "pwd",
 			Callback: pwdCMD,
+		},
+		"cd": {
+			Name:     "cd",
+			Callback: cdCMD,
 		},
 	}
 }
