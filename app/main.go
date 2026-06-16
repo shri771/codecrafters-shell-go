@@ -2,11 +2,12 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/codecrafters-io/shell-starter-go/pkg/utils"
 )
 
 var validCmd = []string{"echo", "cd"}
@@ -24,10 +25,13 @@ func main() {
 
 		line := reader.Text()
 
+		// Sanitize Args
 		parts := strings.Fields(strings.ToLower(line))
 
+		if len(parts) == 0 {
+			continue
+		}
 		program := parts[0]
-
 		var args []string
 
 		if len(parts) != 0 {
@@ -35,12 +39,17 @@ func main() {
 		}
 
 		availableCmd := getCommands()
-
 		cliCmd, ok := availableCmd[program]
 		if ok {
-			cliCmd.callback(args)
+			err := cliCmd.callback(args)
+			if err != nil {
+				fmt.Printf("Unable to run program\n: %s", err)
+			}
 		} else {
-			fmt.Printf("%s: command not found\n", program)
+			err := runProgram(program, args)
+			if err != nil {
+				fmt.Printf("Unable to run program\n: %s", err)
+			}
 		}
 
 	}
@@ -56,11 +65,11 @@ func getCommands() map[string]cliCommand {
 		},
 		"echo": {
 			name:     "echo",
-			callback: echo,
+			callback: echoCMD,
 		},
 		"exit": {
 			name:     "exit",
-			callback: exit,
+			callback: exitCMD,
 		},
 		"type": {
 			name:     "type",
@@ -69,36 +78,68 @@ func getCommands() map[string]cliCommand {
 	}
 }
 
-func exit(args []string) error {
+func exitCMD(args []string) error {
 	os.Exit(0)
 	return nil
 }
 
-func echo(args []string) error {
+func echoCMD(args []string) error {
 	fmt.Println(strings.Join(args, " "))
 	return nil
 }
 
 func typeCMD(args []string) error {
 	availableCmd := getCommands()
-	arg := args[0]
+	program := args[0]
 
-	_, ok := availableCmd[arg]
+	_, ok := availableCmd[program]
 	if !ok {
-		path, err := exec.LookPath(arg)
+		path, err := utils.LookUpPath(program)
 		if err != nil {
-			if errors.Is(err, exec.ErrNotFound) {
-				fmt.Printf("%s not found\n", arg)
-				return nil
-			} else {
-				return err
-			}
+			return err
 		}
-		fmt.Printf("%s is %s\n", arg, path)
-
+		if path == "" {
+			fmt.Printf("%s not found\n", program)
+		} else {
+			fmt.Printf("%s is %s\n", program, path)
+		}
 	} else {
-		fmt.Printf("%s is a shell builtin\n", arg)
+		fmt.Printf("%s is a shell builtin\n", program)
 	}
+
+	return nil
+}
+
+func runProgram(program string, args []string) error {
+	// status := 0
+	// Find path
+	path, err := utils.LookUpPath(program)
+	if err != nil {
+		return err
+	}
+	if path == "" {
+		fmt.Printf("%s not found\n", program)
+		return nil
+	}
+
+	// Run the program
+	cmd := exec.Command(program, args...)
+	// Capture the out and ins
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	err = cmd.Run()
+	if err != nil {
+		return nil
+	}
+	// if err != nil {
+	// 	if exitErr, ok := err.(*exec.ExitError); ok {
+	// 		status = exitErr.ExitCode()
+	// 	} else {
+	// 		// Program failed to start, not just exited non-zero.
+	// 		status = 1
+	// 	}
+	// }
 
 	return nil
 }
