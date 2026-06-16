@@ -119,7 +119,7 @@ func runProgram(program string, args []string) error {
 		return err
 	}
 	if path == "" {
-		fmt.Printf("%s not found\n", program)
+		fmt.Printf("%s command not found\n", program)
 		return nil
 	}
 
