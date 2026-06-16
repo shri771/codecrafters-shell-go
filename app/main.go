@@ -26,7 +26,8 @@ func main() {
 		line := reader.Text()
 
 		// Sanitize Args
-		parts := strings.Fields(strings.ToLower(line))
+		// parts := strings.Fields(strings.ToLower(line))
+		parts := strings.Fields(line)
 
 		if len(parts) == 0 {
 			continue
