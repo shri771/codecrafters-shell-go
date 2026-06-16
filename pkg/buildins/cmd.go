@@ -61,15 +61,17 @@ func cdCMD(args []string) error {
 
 	argPath := args[0]
 
-	if strings.HasPrefix(argPath, "~") || argPath == "~" {
-		cleanedPath := strings.TrimPrefix(argPath, "~/")
+	if argPath == "~" || strings.HasPrefix(argPath, "~/") {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return err
 		}
 
-		// Join the paths
-		path = filepath.Join(homeDir, cleanedPath)
+		if argPath == "~" {
+			path = homeDir
+		} else {
+			path = filepath.Join(homeDir, strings.TrimPrefix(argPath, "~/"))
+		}
 	} else if strings.HasPrefix(argPath, "/") {
 		path = argPath
 	} else {
