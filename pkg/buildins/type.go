@@ -28,10 +28,8 @@ func GetCommands() map[string]CliCommand {
 			Callback: cdCMD,
 		},
 		"jobs": {
-			Name: "jobs",
-			Callback: func([]string) error {
-				return nil
-			},
+			Name:     "jobs",
+			Callback: jobsCMD,
 		},
 	}
 }

@@ -12,6 +12,7 @@ import (
 
 func main() {
 	reader := bufio.NewScanner(os.Stdin)
+	// Running jobs
 	for {
 		fmt.Print("$ ")
 		reader.Scan()
@@ -19,7 +20,7 @@ func main() {
 		line := reader.Text()
 
 		// Sanitize Args
-		// parts := strings.Fields(strings.ToLower(line))
+		line = utils.CleanArgs(line)
 		parts := strings.Fields(line)
 
 		if len(parts) == 0 {
@@ -39,7 +40,7 @@ func main() {
 				fmt.Printf("Unable to run program\n: %s", err)
 			}
 		} else {
-			err := utils.RunProgram(program, args)
+			err := buildins.RunProgram(program, args)
 			if err != nil {
 				fmt.Printf("Unable to run program\n: %s", err)
 			}

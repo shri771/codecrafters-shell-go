@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/codecrafters-io/shell-starter-go/pkg/utils"
 )
 
 func exitCMD(args []string) error {
@@ -25,7 +23,7 @@ func typeCMD(args []string) error {
 	}
 
 	if !IsBuiltin(program) {
-		path, err := utils.LookUpPath(program)
+		path, err := LookUpPath(program)
 		if err != nil {
 			return err
 		}
