@@ -57,11 +57,7 @@ func runInBackground(program string, args []string, path string) error {
 	cmd := exec.Command(program, args...)
 	// Set the Job
 	job.SetCmdUsed(fmt.Sprintf("%s  %s", program, strings.Join(args, " ")))
-
 	job.SetJobNumber(DefaultJobStore.RunningCount())
-
-	fmt.Println(DefaultJobStore.RunningCount())
-
 	job.SetStatus(Running)
 
 	err := cmd.Start()
