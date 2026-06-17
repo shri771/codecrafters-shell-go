@@ -28,12 +28,11 @@ func main() {
 		program := parts[0]
 		var args []string
 
-		if len(parts) != 0 {
+		if len(parts) > 1 {
 			args = parts[1:]
 		}
 
-		availableCmd := buildins.GetCommands()
-		cliCmd, ok := availableCmd[program]
+		cliCmd, ok := buildins.GetCommand(program)
 		if ok {
 			err := cliCmd.Callback(args)
 			if err != nil {

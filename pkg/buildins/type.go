@@ -27,5 +27,21 @@ func GetCommands() map[string]CliCommand {
 			Name:     "cd",
 			Callback: cdCMD,
 		},
+		"jobs": {
+			Name: "jobs",
+			Callback: func([]string) error {
+				return nil
+			},
+		},
 	}
+}
+
+func GetCommand(name string) (CliCommand, bool) {
+	cmd, ok := GetCommands()[name]
+	return cmd, ok
+}
+
+func IsBuiltin(name string) bool {
+	_, ok := GetCommand(name)
+	return ok
 }
