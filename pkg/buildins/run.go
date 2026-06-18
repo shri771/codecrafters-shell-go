@@ -20,7 +20,8 @@ func RunProgram(program string, args []string) error {
 	}
 
 	// Check if in which mode to run program
-	if strings.HasSuffix(fmt.Sprintf("%s %s", program, strings.Join(args, " ")), "&") {
+	if len(args) > 0 && args[len(args)-1] == "&" {
+		args = args[:len(args)-1]
 		err = runInBackground(program, args, path)
 		if err != nil {
 			return err
