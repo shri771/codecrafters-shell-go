@@ -6,7 +6,7 @@ import (
 
 // Clean args
 func CleanArgs(line string) string {
-	line = strings.ToLower(line)
+	// line = strings.ToLower(line)
 	line = strings.TrimSpace(line)
 
 	return line
