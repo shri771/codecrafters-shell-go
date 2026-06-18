@@ -45,7 +45,7 @@ func jobsCMD(args []string) error {
 	jobs := DefaultJobStore.jobs
 
 	for _, job := range jobs {
-		fmt.Printf("[%d]+  Running                 %s\n", job.JobNumber, job.CmdUsed)
+		fmt.Printf("[%d]+  Running                 %s &\n", job.JobNumber, job.CmdUsed)
 	}
 	return nil
 }
