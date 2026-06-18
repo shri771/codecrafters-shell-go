@@ -28,9 +28,11 @@ func (s *JobStore) RunningCount() int {
 
 	count := 0
 	for _, job := range s.jobs {
+		job.mu.RLock()
 		if job.Status == Running {
 			count++
 		}
+		job.mu.RUnlock()
 	}
 
 	return count

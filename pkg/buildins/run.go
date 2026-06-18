@@ -52,19 +52,19 @@ func runInForeground(path string, args []string) error {
 func runInBackground(program string, args []string, path string) error {
 	job := CreateJob()
 
-	DefaultJobStore.Add(job)
-
 	cmd := exec.Command(program, args...)
 	// Set the Job
 	job.SetCmdUsed(fmt.Sprintf("%s  %s", program, strings.Join(args, " ")))
-	job.SetJobNumber(DefaultJobStore.RunningCount())
-	job.SetStatus(Running)
 
 	err := cmd.Start()
 	if err != nil {
 		return nil
 	}
+	job.SetStatus(Running)
 	job.SetPID(cmd.Process.Pid)
+	DefaultJobStore.Add(job)
+	// job.SetJobNumber(DefaultJobStore.RunningCount())
+	job.SetJobNumber(len(DefaultJobStore.jobs))
 
 	// Display info
 	fmt.Printf("[%d] %d\n", job.GetJobNumber(), job.GetPID())
