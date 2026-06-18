@@ -63,7 +63,7 @@ func runInBackground(program string, args []string, path string) error {
 	cmd.Stdout = os.Stdout
 
 	// Set the Job
-	job.SetCmdUsed(fmt.Sprintf("%s  %s", program, strings.Join(args, " ")))
+	job.SetCmdUsed(fmt.Sprintf("%s %s", program, strings.Join(args, " ")))
 
 	err := cmd.Start()
 	if err != nil {
