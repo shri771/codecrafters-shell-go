@@ -1,6 +1,9 @@
 package buildins
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 type JobStore struct {
 	mu   sync.RWMutex
@@ -39,5 +42,10 @@ func (s *JobStore) RunningCount() int {
 }
 
 func jobsCMD(args []string) error {
+	jobs := DefaultJobStore.jobs
+
+	for _, job := range jobs {
+		fmt.Printf("[%d]+  Running                 %s\n", job.JobNumber, job.CmdUsed)
+	}
 	return nil
 }
