@@ -19,6 +19,8 @@ func RunProgram(program string, args []string) error {
 		return nil
 	}
 
+	_ = strings.Split(fmt.Sprintf("%s  %s", program, strings.Join(args, " ")), "&&")
+
 	// Check if in which mode to run program
 	if len(args) > 0 && args[len(args)-1] == "&" {
 		args = args[:len(args)-1]
@@ -54,6 +56,12 @@ func runInBackground(program string, args []string, path string) error {
 	job := CreateJob()
 
 	cmd := exec.Command(program, args...)
+
+	// Capture the Std
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+
 	// Set the Job
 	job.SetCmdUsed(fmt.Sprintf("%s  %s", program, strings.Join(args, " ")))
 
@@ -94,4 +102,21 @@ func LookUpPath(program string) (string, error) {
 		}
 	}
 	return path, nil
+}
+
+func SplitMultipleCMD(line string) []string {
+	return strings.Split(line, "&&")
+}
+
+func ParseCommandLine(line string) (string, []string) {
+	parts := strings.Fields(line)
+
+	if len(parts) == 0 {
+		return "", nil
+	}
+
+	if len(parts) == 1 {
+		return parts[0], nil
+	}
+	return parts[0], parts[1:]
 }
