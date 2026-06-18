@@ -27,7 +27,7 @@ func RunProgram(program string, args []string) error {
 			return err
 		}
 	} else {
-		err = runInForeground(path, args)
+		err = runInForeground(program, args)
 		if err != nil {
 			return err
 		}
@@ -36,8 +36,8 @@ func RunProgram(program string, args []string) error {
 	return nil
 }
 
-func runInForeground(path string, args []string) error {
-	cmd := exec.Command(path, args...)
+func runInForeground(program string, args []string) error {
+	cmd := exec.Command(program, args...)
 	// Capture the out and ins
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -95,15 +95,3 @@ func LookUpPath(program string) (string, error) {
 	}
 	return path, nil
 }
-
-// Run the program
-// if err != nil {
-// 	if exitErr, ok := err.(*exec.ExitError); ok {
-// 		status = exitErr.ExitCode()
-// 	} else {
-// 		// Program failed to start, not just exited non-zero.
-// 		status = 1
-// 	}
-// }
-
-// status := 0
