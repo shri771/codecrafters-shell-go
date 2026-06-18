@@ -41,11 +41,44 @@ func (s *JobStore) RunningCount() int {
 	return count
 }
 
+func (s *JobStore) JobMarkers() map[*RunningJob]string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	markers := map[*RunningJob]string{}
+	found := 0
+	for i := len(s.jobs) - 1; i >= 0; i-- {
+		job := s.jobs[i]
+		if job.GetStatus() != "running" {
+			continue
+		}
+
+		if found == 0 {
+			markers[job] = "+"
+		} else if found == 1 {
+			markers[job] = "-"
+		}
+
+		found++
+		if found == 2 {
+			break
+		}
+	}
+
+	return markers
+}
+
 func jobsCMD(args []string) error {
 	jobs := DefaultJobStore.jobs
+	markers := DefaultJobStore.JobMarkers()
 
 	for _, job := range jobs {
-		fmt.Printf("[%d]+  Running                 %s &\n", job.JobNumber, job.CmdUsed)
+		marker := markers[job]
+		if marker == "" {
+			marker = " "
+		}
+
+		fmt.Printf("[%d]%s  Running                 %s &\n", job.JobNumber, marker, job.CmdUsed)
 	}
 	return nil
 }
