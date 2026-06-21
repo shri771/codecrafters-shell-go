@@ -72,8 +72,6 @@ func runInBackground(program string, args []string, path string) error {
 	job.SetStatus(Running)
 	job.SetPID(cmd.Process.Pid)
 	DefaultJobStore.Add(job)
-	// job.SetJobNumber(DefaultJobStore.RunningCount())
-	job.SetJobNumber(len(DefaultJobStore.jobs))
 
 	// Display info
 	fmt.Printf("[%d] %d\n", job.GetJobNumber(), job.GetPID())

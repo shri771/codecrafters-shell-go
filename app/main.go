@@ -14,8 +14,11 @@ func main() {
 	reader := bufio.NewScanner(os.Stdin)
 	// Running jobs
 	for {
+		buildins.ReapCompletedJobs()
 		fmt.Print("$ ")
-		reader.Scan()
+		if !reader.Scan() {
+			break
+		}
 
 		line := reader.Text()
 

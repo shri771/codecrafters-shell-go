@@ -9,8 +9,9 @@ import (
 )
 
 type JobStore struct {
-	mu   sync.RWMutex
-	jobs []*RunningJob
+	mu            sync.RWMutex
+	jobs          []*RunningJob
+	nextJobNumber int
 }
 
 var DefaultJobStore = NewJobStore()
@@ -21,11 +22,15 @@ func NewJobStore() *JobStore {
 	}
 }
 
-func (s *JobStore) Add(job *RunningJob) {
+func (s *JobStore) Add(job *RunningJob) int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	s.nextJobNumber++
+	job.SetJobNumber(s.nextJobNumber)
 	s.jobs = append(s.jobs, job)
+
+	return s.nextJobNumber
 }
 
 func (s *JobStore) RunningCount() int {
@@ -72,6 +77,39 @@ func (s *JobStore) RefreshStatuses() {
 			job.SetStatus(Failed)
 		}
 	}
+}
+
+func (s *JobStore) ReapCompleted() {
+	s.RefreshStatuses()
+	markers := s.JobMarkers()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	remaining := s.jobs[:0]
+	for _, job := range s.jobs {
+		status := job.GetStatus()
+		if status != "Done" && status != "failed" {
+			remaining = append(remaining, job)
+			continue
+		}
+
+		if !job.GetIsDisplayed() {
+			marker := markers[job]
+			if marker == "" {
+				marker = " "
+			}
+
+			fmt.Printf("[%d]%s  %s                 %s\n",
+				job.GetJobNumber(), marker, status, job.GetCmdUsed())
+		}
+	}
+
+	s.jobs = remaining
+}
+
+func ReapCompletedJobs() {
+	DefaultJobStore.ReapCompleted()
 }
 
 func (s *JobStore) JobMarkers() map[*RunningJob]string {
