@@ -18,7 +18,7 @@ func ExecuteLine(line string, stdin io.Reader, stdout, stderr io.Writer) error {
 		return nil
 	}
 
-	segments := strings.Split(line, "|")
+	segments := splitPipeline(line)
 	if len(segments) == 1 {
 		command, err := parseCommand(segments[0])
 		if err != nil {
@@ -38,16 +38,109 @@ func ExecuteLine(line string, stdin io.Reader, stdout, stderr io.Writer) error {
 	return executePipeline(commands, stdin, stdout, stderr)
 }
 
+// splitPipeline splits a command line on unquoted '|' characters.
+func splitPipeline(line string) []string {
+	var segments []string
+	var current strings.Builder
+	inSingle := false
+	inDouble := false
+	for i := 0; i < len(line); i++ {
+		ch := line[i]
+		switch {
+		case ch == '\\' && !inSingle:
+			// backslash escape: consume next char literally
+			current.WriteByte(ch)
+			if i+1 < len(line) {
+				i++
+				current.WriteByte(line[i])
+			}
+		case ch == '\'' && !inDouble:
+			inSingle = !inSingle
+			current.WriteByte(ch)
+		case ch == '"' && !inSingle:
+			inDouble = !inDouble
+			current.WriteByte(ch)
+		case ch == '|' && !inSingle && !inDouble:
+			segments = append(segments, current.String())
+			current.Reset()
+		default:
+			current.WriteByte(ch)
+		}
+	}
+	segments = append(segments, current.String())
+	return segments
+}
+
+// parseCommand tokenizes a single command segment, respecting shell quoting.
 func parseCommand(segment string) (parsedCommand, error) {
-	parts := strings.Fields(strings.TrimSpace(segment))
-	if len(parts) == 0 {
+	tokens, err := shellTokenize(strings.TrimSpace(segment))
+	if err != nil {
+		return parsedCommand{}, err
+	}
+	if len(tokens) == 0 {
 		return parsedCommand{}, errors.New("empty command in pipeline")
 	}
-
 	return parsedCommand{
-		program: parts[0],
-		args:    parts[1:],
+		program: tokens[0],
+		args:    tokens[1:],
 	}, nil
+}
+
+// shellTokenize splits a shell command line into tokens, stripping quotes and
+// handling backslash escapes.
+func shellTokenize(s string) ([]string, error) {
+	var tokens []string
+	var current strings.Builder
+	inToken := false
+
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		switch {
+		case ch == '\\' && i+1 < len(s):
+			// outside quotes: backslash escapes next character
+			i++
+			current.WriteByte(s[i])
+			inToken = true
+		case ch == '\'':
+			// single-quoted: everything literal until closing '
+			inToken = true
+			i++
+			for i < len(s) && s[i] != '\'' {
+				current.WriteByte(s[i])
+				i++
+			}
+			// i now points at closing ' (or end of string)
+		case ch == '"':
+			// double-quoted: backslash only escapes \ and "
+			inToken = true
+			i++
+			for i < len(s) && s[i] != '"' {
+				if s[i] == '\\' && i+1 < len(s) && (s[i+1] == '\\' || s[i+1] == '"') {
+					i++
+					current.WriteByte(s[i])
+				} else {
+					current.WriteByte(s[i])
+				}
+				i++
+			}
+			// i now points at closing " (or end of string)
+		case ch == ' ' || ch == '\t':
+			if inToken {
+				tokens = append(tokens, current.String())
+				current.Reset()
+				inToken = false
+			}
+		default:
+			current.WriteByte(ch)
+			inToken = true
+		}
+	}
+
+	if inToken {
+		tokens = append(tokens, current.String())
+	}
+
+	return tokens, nil
 }
 
 func executeCommand(
