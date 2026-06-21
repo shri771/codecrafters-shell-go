@@ -49,7 +49,7 @@ func (s *JobStore) JobMarkers() map[*RunningJob]string {
 	found := 0
 	for i := len(s.jobs) - 1; i >= 0; i-- {
 		job := s.jobs[i]
-		if job.GetStatus() != "running" {
+		if job.GetIsDisplayed() {
 			continue
 		}
 
