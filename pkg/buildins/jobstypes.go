@@ -12,12 +12,13 @@ const (
 )
 
 type RunningJob struct {
-	mu        sync.RWMutex
-	JobNumber int
-	Name      string
-	CmdUsed   string
-	PID       int
-	Status    JobStatus
+	mu          sync.RWMutex
+	JobNumber   int
+	Name        string
+	CmdUsed     string
+	PID         int
+	Status      JobStatus
+	IsDisplayed bool
 }
 
 func CreateJob() *RunningJob {
@@ -103,4 +104,18 @@ func (j *RunningJob) GetStatus() string {
 	default:
 		return "unkown"
 	}
+}
+
+func (j *RunningJob) GetIsDisplayed() bool {
+	j.mu.RLock()
+	defer j.mu.RUnlock()
+
+	return j.IsDisplayed
+}
+
+func (j *RunningJob) SetIsDisplayed(isDisplayed bool) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+
+	j.IsDisplayed = isDisplayed
 }
