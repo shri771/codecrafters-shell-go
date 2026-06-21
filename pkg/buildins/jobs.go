@@ -86,7 +86,7 @@ func jobsCMD(args []string) error {
 		fmt.Printf("[%d]%s  %s                 %s &\n",
 			job.GetJobNumber(), marker, status, job.GetCmdUsed())
 
-		if status == "done" || status == "failed" {
+		if status == "Done" || status == "failed" {
 			job.SetIsDisplayed(true)
 		}
 	}

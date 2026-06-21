@@ -98,7 +98,7 @@ func (j *RunningJob) GetStatus() string {
 	case Stopped:
 		return "stopeed"
 	case Done:
-		return "done"
+		return "Done"
 	case Failed:
 		return "failed"
 	default:
