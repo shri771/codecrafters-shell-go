@@ -9,9 +9,8 @@ import (
 )
 
 type JobStore struct {
-	mu            sync.RWMutex
-	jobs          []*RunningJob
-	nextJobNumber int
+	mu   sync.RWMutex
+	jobs []*RunningJob
 }
 
 var DefaultJobStore = NewJobStore()
@@ -26,11 +25,17 @@ func (s *JobStore) Add(job *RunningJob) int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.nextJobNumber++
-	job.SetJobNumber(s.nextJobNumber)
+	jobNumber := 1
+	for _, existingJob := range s.jobs {
+		if existingJob.GetJobNumber() >= jobNumber {
+			jobNumber = existingJob.GetJobNumber() + 1
+		}
+	}
+
+	job.SetJobNumber(jobNumber)
 	s.jobs = append(s.jobs, job)
 
-	return s.nextJobNumber
+	return jobNumber
 }
 
 func (s *JobStore) RunningCount() int {
@@ -55,7 +60,7 @@ func (s *JobStore) RefreshStatuses() {
 	s.mu.RUnlock()
 
 	for _, job := range jobs {
-		if job.GetStatus() != "running" {
+		if job.GetStatus() != "Running" {
 			continue
 		}
 
@@ -89,7 +94,7 @@ func (s *JobStore) ReapCompleted() {
 	remaining := s.jobs[:0]
 	for _, job := range s.jobs {
 		status := job.GetStatus()
-		if status != "Done" && status != "failed" {
+		if status != "Done" && status != "Failed" {
 			remaining = append(remaining, job)
 			continue
 		}
@@ -159,10 +164,14 @@ func jobsCMD(args []string) error {
 		}
 
 		status := job.GetStatus()
-		fmt.Printf("[%d]%s  %s                 %s\n",
-			job.GetJobNumber(), marker, status, job.GetCmdUsed())
+		suffix := ""
+		if status == "Running" || status == "Stopped" {
+			suffix = " &"
+		}
+		fmt.Printf("[%d]%s  %s                 %s%s\n",
+			job.GetJobNumber(), marker, status, job.GetCmdUsed(), suffix)
 
-		if status == "Done" || status == "failed" {
+		if status == "Done" || status == "Failed" {
 			job.SetIsDisplayed(true)
 		}
 	}

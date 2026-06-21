@@ -94,15 +94,15 @@ func (j *RunningJob) GetStatus() string {
 
 	switch j.Status {
 	case Running:
-		return "running"
+		return "Running"
 	case Stopped:
-		return "stopeed"
+		return "Stopped"
 	case Done:
 		return "Done"
 	case Failed:
-		return "failed"
+		return "Failed"
 	default:
-		return "unkown"
+		return "Unknown"
 	}
 }
 
