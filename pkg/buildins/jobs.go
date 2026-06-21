@@ -3,6 +3,7 @@ package buildins
 import (
 	"errors"
 	"fmt"
+	"io"
 	"sync"
 	"syscall"
 	"time"
@@ -144,7 +145,7 @@ func (s *JobStore) JobMarkers() map[*RunningJob]string {
 	return markers
 }
 
-func jobsCMD(args []string) error {
+func jobsCMD(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	// Give newly started background processes a chance to exit before taking
 	// the non-blocking status snapshot.
 	time.Sleep(10 * time.Millisecond)
@@ -168,7 +169,7 @@ func jobsCMD(args []string) error {
 		if status == "Running" || status == "Stopped" {
 			suffix = " &"
 		}
-		fmt.Printf("[%d]%s  %s                 %s%s\n",
+		fmt.Fprintf(stdout, "[%d]%s  %s                 %s%s\n",
 			job.GetJobNumber(), marker, status, job.GetCmdUsed(), suffix)
 
 		if status == "Done" || status == "Failed" {

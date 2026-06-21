@@ -3,33 +3,44 @@ package buildins
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
 )
 
 func RunProgram(program string, args []string) error {
+	return runProgramWithIO(program, args, os.Stdin, os.Stdout, os.Stderr, true)
+}
+
+func runProgramWithIO(
+	program string,
+	args []string,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
+	allowBackground bool,
+) error {
 	// Find path
 	path, err := LookUpPath(program)
 	if err != nil {
 		return err
 	}
 	if path == "" {
-		fmt.Printf("%s: command not found\n", program)
+		fmt.Fprintf(stderr, "%s: command not found\n", program)
 		return nil
 	}
 
 	_ = strings.Split(fmt.Sprintf("%s  %s", program, strings.Join(args, " ")), "&&")
 
 	// Check if in which mode to run program
-	if len(args) > 0 && args[len(args)-1] == "&" {
+	if allowBackground && len(args) > 0 && args[len(args)-1] == "&" {
 		args = args[:len(args)-1]
-		err = runInBackground(program, args, path)
+		err = runInBackground(program, args, stdin, stdout, stderr)
 		if err != nil {
 			return err
 		}
 	} else {
-		err = runInForeground(program, args)
+		err = runInForeground(program, args, stdin, stdout, stderr)
 		if err != nil {
 			return err
 		}
@@ -38,12 +49,17 @@ func RunProgram(program string, args []string) error {
 	return nil
 }
 
-func runInForeground(program string, args []string) error {
+func runInForeground(
+	program string,
+	args []string,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
+) error {
 	cmd := exec.Command(program, args...)
 	// Capture the out and ins
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
+	cmd.Stderr = stderr
+	cmd.Stdin = stdin
+	cmd.Stdout = stdout
 
 	err := cmd.Run()
 	if err != nil {
@@ -52,15 +68,20 @@ func runInForeground(program string, args []string) error {
 	return nil
 }
 
-func runInBackground(program string, args []string, path string) error {
+func runInBackground(
+	program string,
+	args []string,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
+) error {
 	job := CreateJob()
 
 	cmd := exec.Command(program, args...)
 
 	// Capture the Std
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
+	cmd.Stderr = stderr
+	cmd.Stdin = stdin
+	cmd.Stdout = stdout
 
 	// Set the Job
 	job.SetCmdUsed(fmt.Sprintf("%s %s", program, strings.Join(args, " ")))
@@ -74,7 +95,7 @@ func runInBackground(program string, args []string, path string) error {
 	DefaultJobStore.Add(job)
 
 	// Display info
-	fmt.Printf("[%d] %d\n", job.GetJobNumber(), job.GetPID())
+	fmt.Fprintf(stdout, "[%d] %d\n", job.GetJobNumber(), job.GetPID())
 
 	return nil
 }

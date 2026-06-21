@@ -2,15 +2,16 @@ package buildins
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-func cdCMD(args []string) error {
+func cdCMD(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	var path string
 	if len(args) != 1 {
-		fmt.Println("The argument should be exactly one")
+		fmt.Fprintln(stderr, "The argument should be exactly one")
 		return nil
 	}
 
@@ -43,7 +44,7 @@ func cdCMD(args []string) error {
 	// Check if the path exist's
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		fmt.Printf("cd: %s: No such file or directory\n", path)
+		fmt.Fprintf(stderr, "cd: %s: No such file or directory\n", path)
 		return nil
 	}
 
@@ -53,7 +54,7 @@ func cdCMD(args []string) error {
 			return err
 		}
 	} else {
-		fmt.Printf("cd: %s: No such file or directory\n", path)
+		fmt.Fprintf(stderr, "cd: %s: No such file or directory\n", path)
 		return nil
 	}
 	return nil

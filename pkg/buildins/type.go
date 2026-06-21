@@ -1,8 +1,10 @@
 package buildins
 
+import "io"
+
 type CliCommand struct {
 	Name     string
-	Callback func([]string) error
+	Callback func([]string, io.Reader, io.Writer, io.Writer) error
 }
 
 func GetCommands() map[string]CliCommand {
