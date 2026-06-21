@@ -78,16 +78,6 @@ func runInBackground(program string, args []string, path string) error {
 	// Display info
 	fmt.Printf("[%d] %d\n", job.GetJobNumber(), job.GetPID())
 
-	// Wait for the program to finish running
-	go func() {
-		err = cmd.Wait()
-		if err != nil {
-			job.SetStatus(Failed)
-		} else {
-			job.SetStatus(Done)
-		}
-	}()
-
 	return nil
 }
 

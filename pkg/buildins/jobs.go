@@ -1,8 +1,11 @@
 package buildins
 
 import (
+	"errors"
 	"fmt"
 	"sync"
+	"syscall"
+	"time"
 )
 
 type JobStore struct {
@@ -41,6 +44,36 @@ func (s *JobStore) RunningCount() int {
 	return count
 }
 
+func (s *JobStore) RefreshStatuses() {
+	s.mu.RLock()
+	jobs := append([]*RunningJob(nil), s.jobs...)
+	s.mu.RUnlock()
+
+	for _, job := range jobs {
+		if job.GetStatus() != "running" {
+			continue
+		}
+
+		var waitStatus syscall.WaitStatus
+		pid, err := syscall.Wait4(job.GetPID(), &waitStatus, syscall.WNOHANG, nil)
+		if err != nil {
+			if !errors.Is(err, syscall.ECHILD) {
+				job.SetStatus(Failed)
+			}
+			continue
+		}
+		if pid == 0 {
+			continue
+		}
+
+		if waitStatus.Exited() && waitStatus.ExitStatus() == 0 {
+			job.SetStatus(Done)
+		} else {
+			job.SetStatus(Failed)
+		}
+	}
+}
+
 func (s *JobStore) JobMarkers() map[*RunningJob]string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -69,6 +102,11 @@ func (s *JobStore) JobMarkers() map[*RunningJob]string {
 }
 
 func jobsCMD(args []string) error {
+	// Give newly started background processes a chance to exit before taking
+	// the non-blocking status snapshot.
+	time.Sleep(10 * time.Millisecond)
+	DefaultJobStore.RefreshStatuses()
+
 	jobs := DefaultJobStore.jobs
 	markers := DefaultJobStore.JobMarkers()
 
