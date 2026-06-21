@@ -2,7 +2,6 @@ package buildins
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -27,20 +26,16 @@ func ExecuteLine(line string, stdin io.Reader, stdout, stderr io.Writer) error {
 		}
 		return executeCommand(command, stdin, stdout, stderr, false)
 	}
-	if len(segments) != 2 {
-		return fmt.Errorf("only two-command pipelines are supported")
+	commands := make([]parsedCommand, 0, len(segments))
+	for _, segment := range segments {
+		command, err := parseCommand(segment)
+		if err != nil {
+			return err
+		}
+		commands = append(commands, command)
 	}
 
-	left, err := parseCommand(segments[0])
-	if err != nil {
-		return err
-	}
-	right, err := parseCommand(segments[1])
-	if err != nil {
-		return err
-	}
-
-	return executeTwoCommandPipeline(left, right, stdin, stdout, stderr)
+	return executePipeline(commands, stdin, stdout, stderr)
 }
 
 func parseCommand(segment string) (parsedCommand, error) {
@@ -78,34 +73,60 @@ func executeCommand(
 	)
 }
 
-func executeTwoCommandPipeline(
-	left, right parsedCommand,
+func executePipeline(
+	commands []parsedCommand,
 	stdin io.Reader,
 	stdout, stderr io.Writer,
 ) error {
-	reader, writer := io.Pipe()
-	var waitGroup sync.WaitGroup
-	errorsChannel := make(chan error, 2)
+	readers := make([]*io.PipeReader, len(commands)-1)
+	writers := make([]*io.PipeWriter, len(commands)-1)
+	for index := range readers {
+		readers[index], writers[index] = io.Pipe()
+	}
 
-	waitGroup.Add(2)
-	go func() {
-		defer waitGroup.Done()
-		err := executeCommand(left, stdin, writer, stderr, true)
-		if errors.Is(err, ErrExit) || errors.Is(err, io.ErrClosedPipe) {
-			err = nil
+	var waitGroup sync.WaitGroup
+	errorsChannel := make(chan error, len(commands))
+
+	for index, command := range commands {
+		commandInput := stdin
+		if index > 0 {
+			commandInput = readers[index-1]
 		}
-		writer.CloseWithError(err)
-		errorsChannel <- err
-	}()
-	go func() {
-		defer waitGroup.Done()
-		err := executeCommand(right, reader, stdout, stderr, true)
-		if errors.Is(err, ErrExit) {
-			err = nil
+
+		commandOutput := stdout
+		if index < len(commands)-1 {
+			commandOutput = writers[index]
 		}
-		reader.CloseWithError(err)
-		errorsChannel <- err
-	}()
+
+		waitGroup.Add(1)
+		go func(
+			index int,
+			command parsedCommand,
+			commandInput io.Reader,
+			commandOutput io.Writer,
+		) {
+			defer waitGroup.Done()
+
+			err := executeCommand(
+				command,
+				commandInput,
+				commandOutput,
+				stderr,
+				true,
+			)
+			if errors.Is(err, ErrExit) || errors.Is(err, io.ErrClosedPipe) {
+				err = nil
+			}
+
+			if index < len(writers) {
+				writers[index].CloseWithError(err)
+			}
+			if index > 0 {
+				readers[index-1].CloseWithError(err)
+			}
+			errorsChannel <- err
+		}(index, command, commandInput, commandOutput)
+	}
 
 	waitGroup.Wait()
 	close(errorsChannel)
