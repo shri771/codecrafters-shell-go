@@ -2,14 +2,24 @@ package buildins
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 )
 
+// redirection holds one parsed redirection operator.
+type redirection struct {
+	fd         int  // 1 = stdout, 2 = stderr
+	appendMode bool // true for >>, false for >
+	filename   string
+}
+
 type parsedCommand struct {
-	program string
-	args    []string
+	program      string
+	args         []string
+	redirections []redirection
 }
 
 func ExecuteLine(line string, stdin io.Reader, stdout, stderr io.Writer) error {
@@ -71,7 +81,24 @@ func splitPipeline(line string) []string {
 	return segments
 }
 
-// parseCommand tokenizes a single command segment, respecting shell quoting.
+// parseRedirOp recognises a redirection operator token.
+// Returns (fd, appendMode, true) on match, or (0, false, false) otherwise.
+func parseRedirOp(token string) (fd int, appendMode bool, ok bool) {
+	switch token {
+	case ">", "1>":
+		return 1, false, true
+	case ">>", "1>>":
+		return 1, true, true
+	case "2>":
+		return 2, false, true
+	case "2>>":
+		return 2, true, true
+	}
+	return 0, false, false
+}
+
+// parseCommand tokenizes a single command segment, respecting shell quoting,
+// and extracts any redirection operators.
 func parseCommand(segment string) (parsedCommand, error) {
 	tokens, err := shellTokenize(strings.TrimSpace(segment))
 	if err != nil {
@@ -80,9 +107,35 @@ func parseCommand(segment string) (parsedCommand, error) {
 	if len(tokens) == 0 {
 		return parsedCommand{}, errors.New("empty command in pipeline")
 	}
+
+	var args []string
+	var redirections []redirection
+
+	for i := 0; i < len(tokens); i++ {
+		fd, appendMode, isRedir := parseRedirOp(tokens[i])
+		if isRedir {
+			if i+1 >= len(tokens) {
+				return parsedCommand{}, fmt.Errorf("syntax error: no filename after %s", tokens[i])
+			}
+			redirections = append(redirections, redirection{
+				fd:         fd,
+				appendMode: appendMode,
+				filename:   tokens[i+1],
+			})
+			i++ // skip the filename token
+		} else {
+			args = append(args, tokens[i])
+		}
+	}
+
+	if len(args) == 0 {
+		return parsedCommand{}, errors.New("empty command in pipeline")
+	}
+
 	return parsedCommand{
-		program: tokens[0],
-		args:    tokens[1:],
+		program:      args[0],
+		args:         args[1:],
+		redirections: redirections,
 	}, nil
 }
 
@@ -143,12 +196,57 @@ func shellTokenize(s string) ([]string, error) {
 	return tokens, nil
 }
 
+// applyRedirections opens files for all redirections and returns updated
+// stdout/stderr writers plus a cleanup function that closes all opened files.
+func applyRedirections(
+	redirections []redirection,
+	stdout, stderr io.Writer,
+) (io.Writer, io.Writer, func(), error) {
+	var openFiles []*os.File
+
+	cleanup := func() {
+		for _, f := range openFiles {
+			f.Close()
+		}
+	}
+
+	for _, redir := range redirections {
+		flags := os.O_WRONLY | os.O_CREATE
+		if redir.appendMode {
+			flags |= os.O_APPEND
+		} else {
+			flags |= os.O_TRUNC
+		}
+		f, err := os.OpenFile(redir.filename, flags, 0644)
+		if err != nil {
+			cleanup()
+			return stdout, stderr, func() {}, err
+		}
+		openFiles = append(openFiles, f)
+		switch redir.fd {
+		case 1:
+			stdout = f
+		case 2:
+			stderr = f
+		}
+	}
+
+	return stdout, stderr, cleanup, nil
+}
+
 func executeCommand(
 	command parsedCommand,
 	stdin io.Reader,
 	stdout, stderr io.Writer,
 	inPipeline bool,
 ) error {
+	// Apply any redirections for this command
+	stdout, stderr, cleanup, err := applyRedirections(command.redirections, stdout, stderr)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
 	if builtin, ok := GetCommand(command.program); ok {
 		if inPipeline && (command.program == "cd" || command.program == "exit") {
 			return nil
