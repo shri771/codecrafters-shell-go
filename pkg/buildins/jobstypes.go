@@ -1,6 +1,9 @@
 package buildins
 
-import "sync"
+import (
+	"os/exec"
+	"sync"
+)
 
 type JobStatus int
 
@@ -19,6 +22,7 @@ type RunningJob struct {
 	PID         int
 	Status      JobStatus
 	IsDisplayed bool
+	Cmd         *exec.Cmd
 }
 
 func CreateJob() *RunningJob {
@@ -79,6 +83,20 @@ func (j *RunningJob) GetPID() int {
 	defer j.mu.RUnlock()
 
 	return j.PID
+}
+
+func (j *RunningJob) SetCmd(cmd *exec.Cmd) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+
+	j.Cmd = cmd
+}
+
+func (j *RunningJob) GetCmd() *exec.Cmd {
+	j.mu.RLock()
+	defer j.mu.RUnlock()
+
+	return j.Cmd
 }
 
 func (j *RunningJob) SetStatus(status JobStatus) {

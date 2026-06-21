@@ -1,11 +1,9 @@
 package buildins
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -55,35 +53,9 @@ func (s *JobStore) RunningCount() int {
 	return count
 }
 
-func (s *JobStore) RefreshStatuses() {
-	s.mu.RLock()
-	jobs := append([]*RunningJob(nil), s.jobs...)
-	s.mu.RUnlock()
-
-	for _, job := range jobs {
-		if job.GetStatus() != "Running" {
-			continue
-		}
-
-		var waitStatus syscall.WaitStatus
-		pid, err := syscall.Wait4(job.GetPID(), &waitStatus, syscall.WNOHANG, nil)
-		if err != nil {
-			if !errors.Is(err, syscall.ECHILD) {
-				job.SetStatus(Failed)
-			}
-			continue
-		}
-		if pid == 0 {
-			continue
-		}
-
-		if waitStatus.Exited() && waitStatus.ExitStatus() == 0 {
-			job.SetStatus(Done)
-		} else {
-			job.SetStatus(Failed)
-		}
-	}
-}
+// RefreshStatuses is now a no-op — job statuses are updated by the goroutine
+// launched in runInBackground via cmd.Wait().
+func (s *JobStore) RefreshStatuses() {}
 
 func (s *JobStore) ReapCompleted() {
 	s.RefreshStatuses()

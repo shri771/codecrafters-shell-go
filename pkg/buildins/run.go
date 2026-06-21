@@ -85,6 +85,7 @@ func runInBackground(
 
 	// Set the Job
 	job.SetCmdUsed(fmt.Sprintf("%s %s", program, strings.Join(args, " ")))
+	job.SetCmd(cmd)
 
 	err := cmd.Start()
 	if err != nil {
@@ -96,6 +97,16 @@ func runInBackground(
 
 	// Display info
 	fmt.Fprintf(stdout, "[%d] %d\n", job.GetJobNumber(), job.GetPID())
+
+	// Wait for the process to finish in background
+	go func() {
+		waitErr := cmd.Wait()
+		if waitErr == nil {
+			job.SetStatus(Done)
+		} else {
+			job.SetStatus(Failed)
+		}
+	}()
 
 	return nil
 }
